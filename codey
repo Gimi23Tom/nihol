@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מנהל תקציב אישי וחכם</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for budget visual distribution -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts - Rubik -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Rubik', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .custom-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+        }
+        .pulse-subtle {
+            animation: pulse 3s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Navbar / Top Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-wallet text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-xl text-slate-900 leading-tight">SmartBudget</h1>
+                    <p class="text-xs text-slate-500 font-medium">ניהול תקציב וחיסכון חכם</p>
+                </div>
+            </div>
+
+            <!-- User Greeting & Reset Action -->
+            <div id="userHeaderInfo" class="hidden flex items-center gap-4">
+                <div class="text-left md:text-right">
+                    <span class="text-xs text-slate-400 block">שלום,</span>
+                    <span id="displayUserName" class="font-bold text-slate-800 text-sm md:text-base">משתמש</span>
+                    <span id="displayUserCode" class="text-[10px] text-indigo-600 block bg-indigo-50 px-2 py-0.5 rounded-full font-mono mt-0.5">קוד: -</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button onclick="handleLogout()" title="התנתק / החלף משתמש" class="p-2.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition duration-200 flex items-center gap-1.5 text-xs font-semibold">
+                        <i class="fa-solid fa-right-from-bracket text-base"></i>
+                        <span class="hidden sm:inline">התנתק</span>
+                    </button>
+                    <button onclick="confirmResetData()" title="איפוס נתוני חשבון זה" class="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition duration-200">
+                        <i class="fa-solid fa-rotate-right text-base"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- Step 0: Login / Passcode Entrance Screen -->
+        <section id="loginSection" class="max-w-md mx-auto mt-6 sm:mt-12">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-100 relative overflow-hidden">
+                <div class="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                
+                <div class="text-center mb-6">
+                    <div class="inline-flex p-3 rounded-2xl bg-indigo-50 text-indigo-600 mb-3">
+                        <i class="fa-solid fa-user-lock text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800">כניסה למערכת התקציב</h2>
+                    <p class="text-slate-500 text-sm mt-1">הזינו שם משתמש וסיסמה אישית כדי להיכנס</p>
+                </div>
+
+                <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                    <div>
+                        <label for="loginUsernameInput" class="block text-xs font-semibold text-slate-700 mb-1">שם / שם משתמש</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                                <i class="fa-regular fa-user"></i>
+                            </span>
+                            <input type="text" id="loginUsernameInput" required placeholder="לדוגמה: ישראל" 
+                                class="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition text-slate-800 font-medium">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="loginPasswordInput" class="block text-xs font-semibold text-slate-700 mb-1">סיסמה אישית</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-key"></i>
+                            </span>
+                            <input type="password" id="loginPasswordInput" required placeholder="הזינו סיסמה" 
+                                class="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition text-slate-800 font-mono text-lg">
+                        </div>
+                    </div>
+
+                    <div id="loginErrorMsg" class="hidden p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span id="loginErrorText">סיסמה שגויה!</span>
+                    </div>
+
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        💡 אם שם המשתמש קיים - המערכת תאמת את הסיסמה. אם מדובר בשם חדש - ייפתח עבורו חשבון חדש.
+                    </p>
+
+                    <button type="submit" class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-2xl shadow-lg shadow-indigo-500/20 transition duration-200 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span>התחבר / הרשם</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Step 1: Initial Setup Modal / Card (Visible if new user without data) -->
+        <section id="setupSection" class="hidden max-w-lg mx-auto mt-6 sm:mt-12">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-100 relative overflow-hidden">
+                <div class="absolute -top-12 -left-12 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
+                <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
+
+                <div class="text-center mb-6">
+                    <div class="inline-flex p-3 rounded-2xl bg-indigo-50 text-indigo-600 mb-3">
+                        <i class="fa-solid fa-calculator text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800">הגדרת חשבון חדש</h2>
+                    <p class="text-slate-500 text-sm mt-1">שלום <span id="setupWelcomeName" class="font-bold text-indigo-600"></span>, הזינו את סכום הכסף הראשוני לחשבונכם</p>
+                </div>
+
+                <form id="setupForm" onsubmit="handleInitialSetup(event)" class="space-y-5">
+                    <div>
+                        <label for="initialMoneyInput" class="block text-sm font-medium text-slate-700 mb-1">כמה כסף יש לך כרגע? (₪)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-shekel-sign"></i>
+                            </span>
+                            <input type="number" id="initialMoneyInput" step="0.01" min="120" required placeholder="לדוגמה: 1000" 
+                                class="w-full pr-10 pl-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition duration-200 text-slate-800">
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                            💡 **איך זה עובד?** מתוך הסכום יקוזזו 120 ₪ לקופת בזבוזים. שאר הכסף יחולק 50% לחיסכון קרוב ו-50% לחיסכון עתידי.
+                        </p>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold rounded-2xl shadow-lg shadow-indigo-500/25 transition duration-200 flex items-center justify-center gap-2 text-base">
+                        <span>התחל לנהל את התקציב</span>
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Step 2: Main Dashboard (Hidden initially until user setup complete) -->
+        <div id="dashboardSection" class="hidden space-y-8">
+            
+            <!-- Summary Header Banner -->
+            <div class="glass-card rounded-3xl p-6 sm:p-8 custom-shadow border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div>
+                    <span class="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-semibold tracking-wide">מאזן כולל</span>
+                    <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-2" id="totalBalanceDisplay">0 ₪</h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">סה"כ הכספים המנוהלים בכל 3 הקופות</p>
+                </div>
+
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <div class="flex-1 md:flex-initial bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-center">
+                        <span class="text-xs text-slate-400 block mb-0.5">סה"כ הכנסות</span>
+                        <span id="totalIncomeDisplay" class="font-bold text-emerald-600 text-base">0 ₪</span>
+                    </div>
+                    <div class="flex-1 md:flex-initial bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-center">
+                        <span class="text-xs text-slate-400 block mb-0.5">סה"כ הוצאות</span>
+                        <span id="totalExpenseDisplay" class="font-bold text-rose-600 text-base">0 ₪</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- The 3 Main Money Pots / Buckets -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- 1. Pocket Money / Spending (בזבוזים) -->
+                <div class="glass-card rounded-3xl p-6 relative overflow-hidden border border-amber-100 shadow-sm hover:shadow-md transition duration-300">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+                            <i class="fa-solid fa-bag-shopping text-xl"></i>
+                        </div>
+                        <span class="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-full">קופת הוצאות</span>
+                    </div>
+                    <h3 class="text-slate-500 font-medium text-sm">בזבוזים</h3>
+                    <p id="spendingBucketDisplay" class="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">0 ₪</p>
+                    <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info text-amber-500"></i>
+                        <span>כל ההוצאות יורדות **רק** מהקופה הזו.</span>
+                    </p>
+                </div>
+
+                <!-- 2. Short-term Savings (חיסכון קרוב) -->
+                <div class="glass-card rounded-3xl p-6 relative overflow-hidden border border-emerald-100 shadow-sm hover:shadow-md transition duration-300">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                            <i class="fa-solid fa-piggy-bank text-xl"></i>
+                        </div>
+                        <span class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-full">נעול למשוך</span>
+                    </div>
+                    <h3 class="text-slate-500 font-medium text-sm">חיסכון קרוב</h3>
+                    <p id="shortTermBucketDisplay" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">0 ₪</p>
+                    <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+                        <i class="fa-solid fa-lock text-emerald-500"></i>
+                        <span>מקבל 50% מכל הכנסה. ללא אפשרות משיכה.</span>
+                    </p>
+                </div>
+
+                <!-- 3. Future Savings (חיסכון עתידי) -->
+                <div class="glass-card rounded-3xl p-6 relative overflow-hidden border border-indigo-100 shadow-sm hover:shadow-md transition duration-300">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                            <i class="fa-solid fa-chart-line text-xl"></i>
+                        </div>
+                        <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-1 rounded-full">טווח ארוך</span>
+                    </div>
+                    <h3 class="text-slate-500 font-medium text-sm">חיסכון עתידי</h3>
+                    <p id="longTermBucketDisplay" class="text-2xl sm:text-3xl font-extrabold text-indigo-600 mt-1">0 ₪</p>
+                    <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+                        <i class="fa-solid fa-seedling text-indigo-500"></i>
+                        <span>מקבל 50% מכל הכנסה. צמיחה עתידית.</span>
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- Actions Section: Income and Expense Forms -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Income Input Form Box -->
+                <div class="glass-card rounded-3xl p-6 sm:p-7 shadow-sm border border-emerald-100/80">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-arrow-down text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-lg">הכנסה חדשה</h3>
+                            <p class="text-xs text-slate-400">הכסף יחולק חצי לחיסכון קרוב וחצי לחיסכון עתידי</p>
+                        </div>
+                    </div>
+
+                    <form onsubmit="handleAddIncome(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">סכום ההכנסה (₪)</label>
+                            <input type="number" id="incomeAmount" step="0.01" min="0.01" required placeholder="לדוגמה: 500" 
+                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:bg-white transition text-slate-800 font-medium">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">תיאור / מקור ההכנסה</label>
+                            <input type="text" id="incomeDescription" placeholder="לדוגמה: משכורת, מתנה, פרילנס" 
+                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:bg-white transition text-slate-800">
+                        </div>
+
+                        <!-- Quick Split Preview -->
+                        <div id="incomeSplitPreview" class="hidden p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 text-xs text-emerald-800 flex justify-around">
+                            <span>לחיסכון קרוב: <strong id="previewShort">0 ₪</strong></span>
+                            <span>|</span>
+                            <span>לחיסכון עתידי: <strong id="previewLong">0 ₪</strong></span>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl shadow-lg shadow-emerald-600/20 transition duration-200 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>הכנס כסף לקופות החיסכון</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Expense Input Form Box -->
+                <div class="glass-card rounded-3xl p-6 sm:p-7 shadow-sm border border-rose-100/80">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-arrow-up text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-lg">הוצאה חדשה</h3>
+                            <p class="text-xs text-slate-400">יורד אך ורק מקופת "בזבוזים"</p>
+                        </div>
+                    </div>
+
+                    <form onsubmit="handleAddExpense(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">סכום ההוצאה (₪)</label>
+                            <input type="number" id="expenseAmount" step="0.01" min="0.01" required placeholder="לדוגמה: 40" 
+                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-rose-500 focus:bg-white transition text-slate-800 font-medium">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">תיאור ההוצאה</label>
+                            <input type="text" id="expenseDescription" placeholder="לדוגמה: קפה, מסעדה, קניות" 
+                                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-rose-500 focus:bg-white transition text-slate-800">
+                        </div>
+
+                        <div id="expenseError" class="hidden p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            <span id="expenseErrorText">אין מספיק כסף בקופת הבזבוזים!</span>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-2xl shadow-lg shadow-rose-600/20 transition duration-200 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-minus"></i>
+                            <span>רשום הוצאה מבזבוזים</span>
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- Analytics & Transaction Log Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                
+                <!-- Chart Visualizer -->
+                <div class="glass-card rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col items-center justify-center">
+                    <h3 class="font-bold text-slate-800 text-base mb-4 self-start flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-500"></i>
+                        <span>חלוקת הכסף הנוכחית</span>
+                    </h3>
+                    <div class="w-full max-w-[240px] h-[240px] relative">
+                        <canvas id="budgetChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Transaction Log Table (Takes 2 cols) -->
+                <div class="lg:col-span-2 glass-card rounded-3xl p-6 shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-indigo-500"></i>
+                            <span>היסטוריית תנועות</span>
+                        </h3>
+                        <span id="historyCount" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full">0 תנועות</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right text-sm">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-100 text-xs">
+                                    <th class="pb-3 font-semibold">סוג</th>
+                                    <th class="pb-3 font-semibold">תיאור</th>
+                                    <th class="pb-3 font-semibold">סכום</th>
+                                    <th class="pb-3 font-semibold">פירוט חלוקה</th>
+                                    <th class="pb-3 font-semibold">תאריך</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody" class="divide-y divide-slate-100">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                        
+                        <div id="emptyHistoryState" class="py-12 text-center text-slate-400">
+                            <i class="fa-regular fa-folder-open text-3xl mb-2 block text-slate-300"></i>
+                            <span>טרם נרשמו תנועות</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-12 py-4 text-center text-xs text-slate-400">
+        <p>מנהל התקציב האישי שלי &copy; כל הנתונים שמורים בדפדפן שלך בבטחה</p>
+    </footer>
+
+    <script>
+        // State Store
+        let activeUsername = '';
+        let pendingCredentials = null; // { username, password, userKey }
+        let budgetState = {
+            userName: '',
+            password: '',
+            initialTotal: 0,
+            spending: 0,       // בזבוזים
+            shortTerm: 0,      // חיסכון קרוב
+            longTerm: 0,       // חיסכון עתידי
+            transactions: [],
+            isConfigured: false
+        };
+
+        let chartInstance = null;
+
+        // Load data on page launch
+        window.addEventListener('DOMContentLoaded', () => {
+            setupIncomePreviewListener();
+            checkAutoLogin();
+        });
+
+        // Check if there was a recently active session
+        function checkAutoLogin() {
+            const savedUsername = localStorage.getItem('smart_budget_active_user');
+            if (savedUsername) {
+                loadUserAccount(savedUsername);
+            } else {
+                renderApp();
+            }
+        }
+
+        // Login / Register Submit Handler
+        function handleLoginSubmit(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsernameInput').value.trim();
+            const password = document.getElementById('loginPasswordInput').value;
+            const errorBox = document.getElementById('loginErrorMsg');
+            const errorText = document.getElementById('loginErrorText');
+
+            errorBox.classList.add('hidden');
+
+            if (!username || !password) return;
+
+            const userKey = username.toLowerCase();
+            const savedData = localStorage.getItem(`smart_budget_user_${userKey}`);
+
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    if (parsed.password !== password) {
+                        errorText.textContent = 'סיסמה שגויה עבור שם משתמש זה!';
+                        errorBox.classList.remove('hidden');
+                        return;
+                    }
+                    // Password verified!
+                    activeUsername = userKey;
+                    budgetState = parsed;
+                    localStorage.setItem('smart_budget_active_user', activeUsername);
+                    renderApp();
+                } catch (e) {
+                    console.error("Failed to parse user data", e);
+                }
+            } else {
+                // New username -> proceed to initial budget setup
+                pendingCredentials = { username, password, userKey };
+                document.getElementById('setupWelcomeName').textContent = username;
+                renderApp();
+            }
+        }
+
+        // Load specific account state from localStorage
+        function loadUserAccount(userKey) {
+            const savedData = localStorage.getItem(`smart_budget_user_${userKey}`);
+            if (savedData) {
+                try {
+                    activeUsername = userKey;
+                    budgetState = JSON.parse(savedData);
+                } catch (e) {
+                    console.error("Failed to parse account data", e);
+                    resetCurrentState();
+                }
+            } else {
+                resetCurrentState();
+            }
+            renderApp();
+        }
+
+        function resetCurrentState() {
+            budgetState = {
+                userName: '',
+                password: '',
+                initialTotal: 0,
+                spending: 0,
+                shortTerm: 0,
+                longTerm: 0,
+                transactions: [],
+                isConfigured: false
+            };
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('smart_budget_active_user');
+            activeUsername = '';
+            pendingCredentials = null;
+            resetCurrentState();
+            document.getElementById('loginUsernameInput').value = '';
+            document.getElementById('loginPasswordInput').value = '';
+            document.getElementById('loginErrorMsg').classList.add('hidden');
+            renderApp();
+        }
+
+        // Live calculation preview on typing income
+        function setupIncomePreviewListener() {
+            const incInput = document.getElementById('incomeAmount');
+            const previewBox = document.getElementById('incomeSplitPreview');
+            const previewShort = document.getElementById('previewShort');
+            const previewLong = document.getElementById('previewLong');
+
+            if (!incInput) return;
+
+            incInput.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                if (val && val > 0) {
+                    const half = (val / 2).toFixed(2);
+                    previewShort.textContent = `${half} ₪`;
+                    previewLong.textContent = `${half} ₪`;
+                    previewBox.classList.remove('hidden');
+                } else {
+                    previewBox.classList.add('hidden');
+                }
+            });
+        }
+
+        // Initial setup submission logic for new accounts
+        function handleInitialSetup(event) {
+            event.preventDefault();
+            const initialMoney = parseFloat(document.getElementById('initialMoneyInput').value);
+
+            if (isNaN(initialMoney) || initialMoney < 120) {
+                alert('אנא הזינו סכום התחלתי של לפחות 120 ₪.');
+                return;
+            }
+
+            if (!pendingCredentials) return;
+
+            const spendingVal = 120;
+            const remaining = initialMoney - 120;
+            const shortTermVal = remaining / 2;
+            const longTermVal = remaining / 2;
+
+            activeUsername = pendingCredentials.userKey;
+            budgetState = {
+                userName: pendingCredentials.username,
+                password: pendingCredentials.password,
+                initialTotal: initialMoney,
+                spending: spendingVal,
+                shortTerm: shortTermVal,
+                longTerm: longTermVal,
+                transactions: [{
+                    id: Date.now(),
+                    type: 'setup',
+                    description: 'הגדרת תקציב ראשונית',
+                    amount: initialMoney,
+                    spendingDelta: spendingVal,
+                    shortTermDelta: shortTermVal,
+                    longTermDelta: longTermVal,
+                    date: new Date().toLocaleDateString('he-IL', { hour: '2-digit', minute: '2-digit' })
+                }],
+                isConfigured: true
+            };
+
+            pendingCredentials = null;
+            localStorage.setItem('smart_budget_active_user', activeUsername);
+            saveToLocalStorage();
+            renderApp();
+        }
+
+        // Add new Income (הכנסה)
+        function handleAddIncome(event) {
+            event.preventDefault();
+            const amountInput = document.getElementById('incomeAmount');
+            const descInput = document.getElementById('incomeDescription');
+
+            const amount = parseFloat(amountInput.value);
+            const desc = descInput.value.trim() || 'הכנסה חדשה';
+
+            if (isNaN(amount) || amount <= 0) return;
+
+            // Rule: Every 1 NIS added splits 50% to short term, 50% to long term. 0% to spending.
+            const half = amount / 2;
+
+            budgetState.shortTerm += half;
+            budgetState.longTerm += half;
+
+            budgetState.transactions.unshift({
+                id: Date.now(),
+                type: 'income',
+                description: desc,
+                amount: amount,
+                spendingDelta: 0,
+                shortTermDelta: half,
+                longTermDelta: half,
+                date: new Date().toLocaleDateString('he-IL', { hour: '2-digit', minute: '2-digit' })
+            });
+
+            amountInput.value = '';
+            descInput.value = '';
+            document.getElementById('incomeSplitPreview').classList.add('hidden');
+
+            saveToLocalStorage();
+            renderApp();
+        }
+
+        // Add new Expense (הוצאה)
+        function handleAddExpense(event) {
+            event.preventDefault();
+            const amountInput = document.getElementById('expenseAmount');
+            const descInput = document.getElementById('expenseDescription');
+            const errorBox = document.getElementById('expenseError');
+
+            errorBox.classList.add('hidden');
+            const amount = parseFloat(amountInput.value);
+            const desc = descInput.value.trim() || 'הוצאה שוטפת';
+
+            if (isNaN(amount) || amount <= 0) return;
+
+            // Rule: All expense deductions come strictly out of בזבוזים (spending)
+            if (amount > budgetState.spending) {
+                document.getElementById('expenseErrorText').textContent = 
+                    `אין מספיק כסף בקופת הבזבוזים! (קיימים כרגע ${budgetState.spending.toFixed(2)} ₪ בלבד).`;
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            budgetState.spending -= amount;
+
+            budgetState.transactions.unshift({
+                id: Date.now(),
+                type: 'expense',
+                description: desc,
+                amount: amount,
+                spendingDelta: -amount,
+                shortTermDelta: 0,
+                longTermDelta: 0,
+                date: new Date().toLocaleDateString('he-IL', { hour: '2-digit', minute: '2-digit' })
+            });
+
+            amountInput.value = '';
+            descInput.value = '';
+
+            saveToLocalStorage();
+            renderApp();
+        }
+
+        function renderApp() {
+            const loginSec = document.getElementById('loginSection');
+            const setupSec = document.getElementById('setupSection');
+            const dashboardSec = document.getElementById('dashboardSection');
+            const userHeader = document.getElementById('userHeaderInfo');
+
+            // View state 1: If pending new user setup
+            if (pendingCredentials) {
+                loginSec.classList.add('hidden');
+                setupSec.classList.remove('hidden');
+                dashboardSec.classList.add('hidden');
+                userHeader.classList.add('hidden');
+                return;
+            }
+
+            // View state 2: Not logged in
+            if (!activeUsername || !budgetState.isConfigured) {
+                loginSec.classList.remove('hidden');
+                setupSec.classList.add('hidden');
+                dashboardSec.classList.add('hidden');
+                userHeader.classList.add('hidden');
+                return;
+            }
+
+            // View state 3: Logged in & configured -> Show main dashboard
+            loginSec.classList.add('hidden');
+            setupSec.classList.add('hidden');
+            dashboardSec.classList.remove('hidden');
+            userHeader.classList.remove('hidden');
+
+            // Set user header details
+            document.getElementById('displayUserName').textContent = budgetState.userName;
+            document.getElementById('displayUserCode').textContent = `משתמש: ${budgetState.userName}`;
+
+            // Calculate totals
+            const totalBalance = budgetState.spending + budgetState.shortTerm + budgetState.longTerm;
+
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            budgetState.transactions.forEach(t => {
+                if (t.type === 'income' || t.type === 'setup') {
+                    totalIncome += t.amount;
+                } else if (t.type === 'expense') {
+                    totalExpense += t.amount;
+                }
+            });
+
+            // Format numbers to ILS
+            document.getElementById('totalBalanceDisplay').textContent = formatCurrency(totalBalance);
+            document.getElementById('spendingBucketDisplay').textContent = formatCurrency(budgetState.spending);
+            document.getElementById('shortTermBucketDisplay').textContent = formatCurrency(budgetState.shortTerm);
+            document.getElementById('longTermBucketDisplay').textContent = formatCurrency(budgetState.longTerm);
+
+            document.getElementById('totalIncomeDisplay').textContent = formatCurrency(totalIncome);
+            document.getElementById('totalExpenseDisplay').textContent = formatCurrency(totalExpense);
+
+            // Render Chart
+            renderChart(budgetState.spending, budgetState.shortTerm, budgetState.longTerm);
+
+            // Render Table History
+            renderHistoryTable();
+        }
+
+        function renderHistoryTable() {
+            const tableBody = document.getElementById('transactionsTableBody');
+            const emptyState = document.getElementById('emptyHistoryState');
+            const countBadge = document.getElementById('historyCount');
+
+            tableBody.innerHTML = '';
+            countBadge.textContent = `${budgetState.transactions.length} תנועות`;
+
+            if (budgetState.transactions.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            budgetState.transactions.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition duration-150";
+
+                let badge = '';
+                let amountClass = '';
+                let splitDetail = '';
+
+                if (t.type === 'income') {
+                    badge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"><i class="fa-solid fa-arrow-down text-[10px]"></i> הכנסה</span>`;
+                    amountClass = 'text-emerald-600 font-bold';
+                    splitDetail = `קרוב: +${formatCurrency(t.shortTermDelta)} | עתידי: +${formatCurrency(t.longTermDelta)}`;
+                } else if (t.type === 'expense') {
+                    badge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800"><i class="fa-solid fa-arrow-up text-[10px]"></i> הוצאה</span>`;
+                    amountClass = 'text-rose-600 font-bold';
+                    splitDetail = `מבזבוזים: -${formatCurrency(t.amount)}`;
+                } else {
+                    badge = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"><i class="fa-solid fa-flag text-[10px]"></i> התחלה</span>`;
+                    amountClass = 'text-indigo-600 font-bold';
+                    splitDetail = `בזבוזים: ${formatCurrency(t.spendingDelta)} | קרוב: ${formatCurrency(t.shortTermDelta)} | עתידי: ${formatCurrency(t.longTermDelta)}`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3.5">${badge}</td>
+                    <td class="py-3.5 font-medium text-slate-800">${escapeHtml(t.description)}</td>
+                    <td class="py-3.5 ${amountClass}">${t.type === 'expense' ? '-' : '+'}${formatCurrency(t.amount)}</td>
+                    <td class="py-3.5 text-xs text-slate-500">${splitDetail}</td>
+                    <td class="py-3.5 text-xs text-slate-400">${t.date}</td>
+                `;
+
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function renderChart(spending, shortTerm, longTerm) {
+            const ctx = document.getElementById('budgetChart').getContext('2d');
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['בזבוזים', 'חיסכון קרוב', 'חיסכון עתידי'],
+                    datasets: [{
+                        data: [spending, shortTerm, longTerm],
+                        backgroundColor: [
+                            '#f59e0b', // amber for spending
+                            '#10b981', // emerald for short term
+                            '#6366f1'  // indigo for long term
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: 'Rubik',
+                                    size: 11
+                                },
+                                padding: 12
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ${context.raw.toFixed(2)} ₪`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function formatCurrency(val) {
+            return `${Number(val || 0).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₪`;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function saveToLocalStorage() {
+            if (activeUsername) {
+                localStorage.setItem(`smart_budget_user_${activeUsername}`, JSON.stringify(budgetState));
+            }
+        }
+
+        function confirmResetData() {
+            if (confirm(`האם אתה בטוח שברצונך לאפס את הנתונים בחשבון של ${budgetState.userName}?`)) {
+                if (activeUsername) {
+                    localStorage.removeItem(`smart_budget_user_${activeUsername}`);
+                }
+                resetCurrentState();
+                renderApp();
+            }
+        }
+    </script>
+</body>
+</html>
